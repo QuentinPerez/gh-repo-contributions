@@ -11,10 +11,18 @@ import (
 	"time"
 )
 
-type Contribution struct {
-	Repo    string
-	Commits int
+type Language struct {
+	Name    string
+	Percent float64
 }
+
+type Contribution struct {
+	Repo      string
+	Commits   int
+	Languages []Language
+}
+
+type Contributions []Contribution
 
 func getBody(url string) ([]string, error) {
 	for {
@@ -41,14 +49,14 @@ func getBody(url string) ([]string, error) {
 		}
 		if !wait {
 			// Bypass GitHub abuse detection
-			value := rand.Intn(2000-1000) + 1000
+			value := rand.Intn(1000-500) + 500
 			time.Sleep(time.Duration(value) * time.Millisecond)
 			return tab, nil
 		}
 	}
 }
 
-func GetAllContibutions(pseudo string) ([]Contribution, error) {
+func GetAllContibutions(pseudo string) (Contributions, error) {
 	result := make(map[string]int)
 
 	url := fmt.Sprintf("https://github.com/%s", pseudo)
@@ -61,6 +69,7 @@ func GetAllContibutions(pseudo string) ([]Contribution, error) {
 	for i := 0; i < nbOfLines; i++ {
 		if strings.Contains(tab[i], "join-date") {
 			joinYear, _ = strconv.Atoi(tab[i][len(tab[i])-16 : len(tab[i])-12])
+			break
 		}
 	}
 	if joinYear == 0 {
@@ -128,4 +137,28 @@ func GetAllContibutions(pseudo string) ([]Contribution, error) {
 		inv--
 	}
 	return ret, nil
+}
+
+func (c *Contributions) GetLanguages() error {
+	for id, elem := range *c {
+		url := fmt.Sprintf("https://github.com/%s", elem.Repo)
+		tab, err := getBody(url)
+		if err != nil {
+			return err
+		}
+		nbOfLines := len(tab)
+		(*c)[id].Languages = make([]Language, 10)
+		j := 0
+		for i := 0; i < nbOfLines; i++ {
+			if strings.Contains(tab[i], `class="language-color" aria-label`) {
+				(*c)[id].Languages[j].Name = strings.Split(tab[i][45:], " ")[0]
+				(*c)[id].Languages[j].Percent, _ = strconv.ParseFloat(strings.Split(tab[i][45+len((*c)[id].Languages[j].Name)+1:], "%")[0], 64)
+				j++
+				if j == 10 {
+					break
+				}
+			}
+		}
+	}
+	return nil
 }
