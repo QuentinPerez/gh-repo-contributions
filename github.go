@@ -20,9 +20,12 @@ type Contribution struct {
 	Repo      string
 	Commits   int
 	Languages []Language
+	Star      int
 }
 
 type Contributions []Contribution
+
+type Parsefunc func(c *Contribution, body *[]string)
 
 func getBody(url string) ([]string, error) {
 	for {
@@ -139,26 +142,47 @@ func GetAllContibutions(pseudo string) (Contributions, error) {
 	return ret, nil
 }
 
-func (c *Contributions) GetLanguages() error {
+func (c *Contributions) GetFromRepositoryPage(funcs ...Parsefunc) error {
 	for id, elem := range *c {
 		url := fmt.Sprintf("https://github.com/%s", elem.Repo)
 		tab, err := getBody(url)
 		if err != nil {
 			return err
 		}
-		nbOfLines := len(tab)
-		(*c)[id].Languages = make([]Language, 10)
-		j := 0
-		for i := 0; i < nbOfLines; i++ {
-			if strings.Contains(tab[i], `class="language-color" aria-label`) {
-				(*c)[id].Languages[j].Name = strings.Split(tab[i][45:], " ")[0]
-				(*c)[id].Languages[j].Percent, _ = strconv.ParseFloat(strings.Split(tab[i][45+len((*c)[id].Languages[j].Name)+1:], "%")[0], 64)
-				j++
-				if j == 10 {
-					break
-				}
-			}
+		for _, f := range funcs {
+			f(&(*c)[id], &tab)
 		}
 	}
 	return nil
+}
+
+func GetLanguage(c *Contribution, body *[]string) {
+	nbOfLines := len(*body)
+	c.Languages = make([]Language, 10)
+	j := 0
+	for i := 0; i < nbOfLines; i++ {
+		if strings.Contains((*body)[i], `class="language-color" aria-label`) {
+			c.Languages[j].Name = strings.Split((*body)[i][45:], " ")[0]
+			c.Languages[j].Percent, _ = strconv.ParseFloat(strings.Split((*body)[i][45+len(c.Languages[j].Name)+1:], "%")[0], 64)
+			j++
+			if j == 10 {
+				break
+			}
+		}
+	}
+}
+
+func GetStar(c *Contribution, body *[]string) {
+	nbOfLines := len(*body)
+	for i := 0; i < nbOfLines; i++ {
+		if strings.Contains((*body)[i], `stargazers`) {
+			i++
+			if strings.Contains((*body)[i], `,`) {
+				c.Star, _ = strconv.Atoi(strings.Fields(strings.Replace((*body)[i], ",", "", -1))[0])
+			} else {
+				c.Star, _ = strconv.Atoi(strings.Fields((*body)[i])[0])
+			}
+			break
+		}
+	}
 }
