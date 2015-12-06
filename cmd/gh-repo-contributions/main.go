@@ -13,7 +13,7 @@ func main() {
 	if len(os.Args) != 2 {
 		logrus.Fatalf("Usage: %v <GithubName>", os.Args[0])
 	}
-	result, err := github.GetAllContibutions(os.Args[1])
+	result, err := github.GetAllContibutions(os.Args[1], "golang/go")
 	if err != nil {
 		logrus.Fatal(err)
 	}

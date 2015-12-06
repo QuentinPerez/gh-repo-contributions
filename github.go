@@ -59,7 +59,7 @@ func getBody(url string) ([]string, error) {
 	}
 }
 
-func GetAllContibutions(pseudo string) (Contributions, error) {
+func GetAllContibutions(pseudo string, otherRepositories ...string) (Contributions, error) {
 	result := make(map[string]int)
 
 	url := fmt.Sprintf("https://github.com/%s", pseudo)
@@ -114,7 +114,26 @@ func GetAllContibutions(pseudo string) (Contributions, error) {
 			}
 		}
 	}
+	for _, repo := range otherRepositories {
+		url := fmt.Sprintf("https://github.com/%s/commits?author=%s", repo, pseudo)
+		tab, err := getBody(url)
+		if err != nil {
+			return nil, err
+		}
+		nbOfLines := len(tab)
+		for i := 0; i < nbOfLines; i++ {
+			if strings.Contains(tab[i], "/"+pseudo) && strings.Contains(tab[i], `rel="contributor"`) {
+				if _, ok := result[repo]; !ok {
+					result[repo] = 1
+				} else {
+					result[repo]++
+				}
+			}
+		}
+	}
+
 	var keys []int
+
 	findKeyByValue := func(m map[string]int, value int) string {
 		for k, v := range m {
 			if v == value {
