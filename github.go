@@ -71,7 +71,7 @@ func GetAllContibutions(pseudo string, otherRepositories ...string) (Contributio
 	joinYear := 0
 	for i := 0; i < nbOfLines; i++ {
 		if strings.Contains(tab[i], "join-date") {
-			joinYear, _ = strconv.Atoi(tab[i][len(tab[i])-16 : len(tab[i])-12])
+			joinYear, _ = strconv.Atoi(tab[i][len(tab[i])-22 : len(tab[i])-18])
 			break
 		}
 	}
